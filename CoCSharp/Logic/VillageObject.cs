@@ -1,111 +1,46 @@
-﻿using CoCSharp.Data;
-using Newtonsoft.Json;
-using System;
+﻿using Newtonsoft.Json;
 
 namespace CoCSharp.Logic
 {
     /// <summary>
-    /// 
+    /// Represents an object in a <see cref="Village"/>.
     /// </summary>
     public abstract class VillageObject
     {
         /// <summary>
-        /// 
+        /// Initializes a new instance of the <see cref="VillageObject"/> class.
         /// </summary>
-        public VillageObject(Village village)
+        public VillageObject()
         {
-            ID = -1;
-            Village = village;
+            // Space
         }
 
         /// <summary>
-        /// 
+        /// Initailizes a new instance of the <see cref="VillageObject"/> class
+        /// with the specified data ID.
         /// </summary>
-        /// <param name="id"></param>
-        public VillageObject(int id, Village village)
+        /// <param name="dataID">Data ID of the <see cref="VillageObject"/>.</param>
+        public VillageObject(int dataID)
         {
-            ID = id;
-            Village = village;
+            DataID = dataID;
         }
 
         /// <summary>
-        /// 
+        /// Gets or sets the data ID of the <see cref="VillageObject"/>.
         /// </summary>
         [JsonProperty("data")]
-        public int ID { get; set; }
+        public int DataID { get; set; } //TODO: Hide this thing
 
         /// <summary>
-        /// 
+        /// Gets or sets the X coordinate of the <see cref="VillageObject"/>.
         /// </summary>
         [JsonProperty("x")]
-        public virtual int X { get; set; }
+        public int X { get; set; }
 
         /// <summary>
-        /// 
+        /// Gets or sets the y coordinate of the <see cref="VillageObject"/>.
         /// </summary>
         [JsonProperty("y")]
-        public virtual int Y { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        [JsonIgnore]
-        public virtual Village Village { get; internal set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        [JsonIgnore]
-        public virtual CoCData Data { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        [JsonIgnore]
-        public virtual bool CanUpgrade
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        [JsonIgnore]
-        public virtual bool IsUpgrading
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public virtual void FinishConstruction()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public virtual void CancelConstruction()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public virtual void Construct()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public virtual void Upgrade()
-        {
-            throw new NotImplementedException();
-        }
+        public int Y { get; set; }
     }
 }

@@ -1,139 +1,137 @@
-﻿using CoCSharp.Data;
-using CoCSharp.Networking;
-using Ionic.Zlib;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.IO;
 
 namespace CoCSharp.Logic
 {
     /// <summary>
-    /// 
+    /// Represents a Clash of Clans village.
     /// </summary>
     public class Village
     {
+        /// <summary>
+        /// Represents the minimum legal value of the X coordinate. This field is constant.
+        /// </summary>
+        public const int MinX = 2;
+        
+        /// <summary>
+        /// Represents the minimum legal value of the Y coordinate. This field is constant.
+        /// </summary>
+        public const int MinY = 2;
+
+        /// <summary>
+        /// Represents the maximum legal value of the X coordinate. This field is constant.
+        /// </summary>
+        public const int MaxX = 38;
+
+        /// <summary>
+        /// Represents the maximum legal value of the Y coordinate. This field is constant.
+        /// </summary>
+        public const int MaxY = 38;
+
+        /// <summary>
+        /// Represents the width of the <see cref="Village"/> layout.
+        /// </summary>
+        public const int Width = 40;
+
+        /// <summary>
+        /// Represents the height of the <see cref="Village"/> layout.
+        /// </summary>
+        public const int Height = 40;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Village"/> class.
         /// </summary>
         public Village()
         {
-            Traps = new List<Trap>();
             Buildings = new List<Building>();
             Obstacles = new List<Obstacle>();
+            Traps = new List<Trap>();
             Decorations = new List<Decoration>();
         }
 
         /// <summary>
-        /// 
+        /// Gets or sets the list of <see cref="Building"/> in the <see cref="Village"/>.
         /// </summary>
         [JsonProperty("buildings")]
         public List<Building> Buildings { get; set; }
 
         /// <summary>
-        /// 
+        /// Gets or sets the list of <see cref="Obstacle"/> in the <see cref="Village"/>.
         /// </summary>
         [JsonProperty("obstacles")]
         public List<Obstacle> Obstacles { get; set; }
 
         /// <summary>
-        /// 
+        /// Gets or sets the list of <see cref="Trap"/> in the <see cref="Village"/>.
         /// </summary>
         [JsonProperty("traps")]
         public List<Trap> Traps { get; set; }
 
         /// <summary>
-        /// 
+        /// Gets or sets the list of <see cref="Decoration"/> in the <see cref="Village"/>.
         /// </summary>
         [JsonProperty("decos")]
         public List<Decoration> Decorations { get; set; }
 
         /// <summary>
-        /// 
-        /// </summary>
-        [JsonProperty("respawnVars")]
-        public RespawnVars RespawnVars { get; set; }
-
-        /// <summary>
-        /// 
+        /// Gets or sets the JSON from which the <see cref="Village"/> was
+        /// deserialized. Returns <c>null</c> if the <see cref="Village"/> wasn't deserialized.
         /// </summary>
         [JsonIgnore]
-        public string RawJson { get; set; }
+        public string DeserializedJson { get; set; }
 
         /// <summary>
-        /// 
+        /// Returns a JSON formatted string that represents the current <see cref="Village"/>.
         /// </summary>
-        /// <param name="json"></param>
-        public void FromJson(string json)
-        {
-            //TODO: Make this method static.
-            var village = JsonConvert.DeserializeObject<Village>(json);
-            Buildings = village.Buildings;
-            Obstacles = village.Obstacles;
-            Traps = village.Traps;
-            Decorations = village.Decorations;
-            RespawnVars = village.RespawnVars;
-            RawJson = json;
-
-            for (int i = 0; i < Buildings.Count; i++)
-                Buildings[i].Village = this;
-
-            for (int i = 0; i < Obstacles.Count; i++)
-                Obstacles[i].Village = this;
-
-            for (int i = 0; i < Traps.Count; i++)
-                Traps[i].Village = this;
-
-            for (int i = 0; i < Decorations.Count; i++)
-                Decorations[i].Village = this;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
+        /// <returns>A JSON formatted string that represents the current <see cref="Village"/>.</returns>
         public string ToJson()
         {
-            return JsonConvert.SerializeObject(this);
+            return ToJson(false);
         }
 
         /// <summary>
-        /// 
+        /// Returns a JSON formatted string and indented if specified that represents the current <see cref="Village"/>.
         /// </summary>
-        /// <param name="reader"></param>
-        public void Read(PacketReader reader)
+        /// <param name="indent">If set to <c>true</c> the returned JSON string will be indented.</param>
+        /// <returns>A JSON formatted string and indented if specified that represents the current <see cref="Village"/>.</returns>
+        public string ToJson(bool indent)
         {
-            var homeData = reader.ReadByteArray();
-            if (homeData == null)
-                return;
-            using (var binaryReader = new BinaryReader(new MemoryStream(homeData)))
-            {
-                var decompressedLength = binaryReader.ReadInt32();
-                var compressedJson = binaryReader.ReadBytes(homeData.Length - 4);
-                var json = ZlibStream.UncompressString(compressedJson);
-                if (decompressedLength != json.Length)
-                    if (decompressedLength - 1 != json.Length) // to prevent for running in error
-                        throw new InvalidDataException(string.Format("Json length is not valid. {0} != {1}.", decompressedLength, json.Length));
-                FromJson(json);
-            }
+            return indent == true ? JsonConvert.SerializeObject(this, Formatting.Indented) : JsonConvert.SerializeObject(this);
         }
 
         /// <summary>
-        /// 
+        /// Returns a <see cref="Village"/> that will be deserialize from the specified
+        /// JSON string.
         /// </summary>
-        /// <param name="writer"></param>
-        public void Write(PacketWriter writer)
+        /// <param name="value">JSON string that represents the <see cref="Village"/>.</param>
+        /// <returns>A <see cref="Village"/> that is deserialized from the specified JSON string.</returns>
+        public static Village FromJson(string value)
         {
-            var json = ToJson();
-            var decompressedLength = json.Length;
-            var compressedJson = ZlibStream.CompressString(json);
-            using (var binaryWriter = new BinaryWriter(new MemoryStream()))
-            {
-                binaryWriter.Write(decompressedLength);
-                binaryWriter.Write(compressedJson);
+            var village = JsonConvert.DeserializeObject<Village>(value);
+            village.DeserializedJson = value;
+            return village;
+        }
 
-                var homeData = ((MemoryStream)binaryWriter.BaseStream).ToArray();
-                writer.Write(homeData, 0, homeData.Length);
-            }
+        /// <summary>
+        /// Determines if the specified coordinates is legal. Returns <c>true</c>
+        /// if its valid.
+        /// </summary>
+        /// <param name="x">X coordinate.</param>
+        /// <param name="y">Y coordinate.</param>
+        /// <returns>Returns <c>true</c> if coordinate is valid.</returns>
+        public static bool IsCoordinatesLegal(int x, int y)
+        {
+            if (x > MaxX)
+                return false; // exit asap, small optimization
+            if (y > MaxY)
+                return false;
+
+            if (x < MinX)
+                return false;
+            if (y < MinY)
+                return false;
+
+            return true;
         }
     }
 }

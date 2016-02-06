@@ -1,5 +1,5 @@
-﻿using CoCSharp.Logging;
-using System;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading;
@@ -9,25 +9,22 @@ namespace CoCSharp.Proxy
     public class Program
     {
         public static CoCProxy Proxy { get; set; }
-        public static ProxyConfiguration Configuration { get; set; }
 
         public static void Main(string[] args)
         {
-            Console.Title = "CoC# Proxy";
-            Console.WriteLine("Starting proxy...");
+            Console.Title = "CoC# - Proxy";
 
-            Configuration = ProxyConfiguration.LoadConfiguration("proxyConfig.xml");
-            if (Configuration.DeleteLogOnStartup)
-                File.Delete("packets.log");
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
 
+            Directory.CreateDirectory("messages");
             Proxy = new CoCProxy();
-            Proxy.ServerAddress = Configuration.ServerAddress;
-            Proxy.ServerPort = Configuration.ServerPort;
+            Proxy.Start(new IPEndPoint(IPAddress.Any, 9339));
 
-            Proxy.Start(new IPEndPoint(IPAddress.Any, Configuration.ProxyPort));
+            stopwatch.Stop();
 
-            Console.WriteLine("CoC# is running on *:{0}", Configuration.ProxyPort);
-            Thread.Sleep(-1);
+            Console.WriteLine("Done({0}ms)! Listening on *:9339", stopwatch.Elapsed.TotalMilliseconds);
+            Thread.Sleep(Timeout.Infinite);
         }
     }
 }

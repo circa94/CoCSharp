@@ -1,85 +1,78 @@
-﻿using CoCSharp.Networking.Packets.Commands;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace CoCSharp.Networking
 {
     /// <summary>
-    /// Provides methods to create <see cref="ICommand"/> instances.
+    /// Provides methods to create <see cref="Command"/> instances.
     /// </summary>
     public static class CommandFactory
     {
         static CommandFactory()
         {
-            // Populates m_CommandDictionary with packet ids and types          
-            // Generated from gen_commanddict.py
+            s_commandType = typeof(Command);
+            CommandDictionary = new Dictionary<int, Type>();
 
-            m_CommandDictionary.Add(new BoostBuildingCommand().ID, typeof(BoostBuildingCommand));
-            m_CommandDictionary.Add(new BuyBuildingCommand().ID, typeof(BuyBuildingCommand));
-            m_CommandDictionary.Add(new BuyDecorationCommand().ID, typeof(BuyDecorationCommand));
-            m_CommandDictionary.Add(new BuyResourcesCommand().ID, typeof(BuyResourcesCommand));
-            m_CommandDictionary.Add(new BuyShieldCommand().ID, typeof(BuyShieldCommand));
-            m_CommandDictionary.Add(new BuyTrapCommand().ID, typeof(BuyTrapCommand));
-            m_CommandDictionary.Add(new CancelConstructionCommand().ID, typeof(CancelConstructionCommand));
-            m_CommandDictionary.Add(new CancelHeroUpgradeCommand().ID, typeof(CancelHeroUpgradeCommand));
-            m_CommandDictionary.Add(new CancelUnitProductionCommand().ID, typeof(CancelUnitProductionCommand));
-            m_CommandDictionary.Add(new CancelUpgradeUnitCommand().ID, typeof(CancelUpgradeUnitCommand));
-            m_CommandDictionary.Add(new CastSpellCommand().ID, typeof(CastSpellCommand));
-            m_CommandDictionary.Add(new ClaimAchievementRewardCommand().ID, typeof(ClaimAchievementRewardCommand));
-            m_CommandDictionary.Add(new ClearObstacleCommand().ID, typeof(ClearObstacleCommand));
-            m_CommandDictionary.Add(new CollectResourcesCommand().ID, typeof(CollectResourcesCommand));
-            m_CommandDictionary.Add(new FreeWorkerCommand().ID, typeof(FreeWorkerCommand));
-            m_CommandDictionary.Add(new LoadTurrentCommand().ID, typeof(LoadTurrentCommand));
-            m_CommandDictionary.Add(new MissionProgressCommand().ID, typeof(MissionProgressCommand));
-            m_CommandDictionary.Add(new MoveBuildingCommand().ID, typeof(MoveBuildingCommand));
-            m_CommandDictionary.Add(new PlaceAttackerCommand().ID, typeof(PlaceAttackerCommand));
-            m_CommandDictionary.Add(new RequestAllianceUnitsCommand().ID, typeof(RequestAllianceUnitsCommand));
-            m_CommandDictionary.Add(new SellBuildingCommand().ID, typeof(SellBuildingCommand));
-            m_CommandDictionary.Add(new SpeedUpClearingCommand().ID, typeof(SpeedUpClearingCommand));
-            m_CommandDictionary.Add(new SpeedUpConstructionCommand().ID, typeof(SpeedUpConstructionCommand));
-            m_CommandDictionary.Add(new SpeedUpHeroHealthCommand().ID, typeof(SpeedUpHeroHealthCommand));
-            m_CommandDictionary.Add(new SpeedUpTrainingCommand().ID, typeof(SpeedUpTrainingCommand));
-            m_CommandDictionary.Add(new SpeedUpUpgradeHeroCommand().ID, typeof(SpeedUpUpgradeHeroCommand));
-            m_CommandDictionary.Add(new SpeedUpUpgradeUnitCommand().ID, typeof(SpeedUpUpgradeUnitCommand));
-            m_CommandDictionary.Add(new ToggleAttackModeCommand().ID, typeof(ToggleAttackModeCommand));
-            m_CommandDictionary.Add(new ToggleHeroSleepCommand().ID, typeof(ToggleHeroSleepCommand));
-            m_CommandDictionary.Add(new TrainUnitCommand().ID, typeof(TrainUnitCommand));
-            m_CommandDictionary.Add(new UnlockBuildingCommand().ID, typeof(UnlockBuildingCommand));
-            m_CommandDictionary.Add(new UpgradeBuildingCommand().ID, typeof(UpgradeBuildingCommand));
-            m_CommandDictionary.Add(new UpgradeHeroCommand().ID, typeof(UpgradeHeroCommand));
-            m_CommandDictionary.Add(new UpgradeUnitCommand().ID, typeof(UpgradeUnitCommand));
+            var assembly = Assembly.GetExecutingAssembly();
+            var types = assembly.GetTypes();
+            for (int i = 0; i < types.Length; i++)
+            {
+                var type = types[i];
+                if (type.IsSubclassOf(s_commandType))
+                {
+                    var suppressAttribute = type.GetCustomAttributes<CommandFactorySuppressAttribute>().FirstOrDefault();
+                    if (suppressAttribute != null && suppressAttribute.Suppress)
+                        continue; // check if the class has the MessageFactorySuppressAttribute
+
+                    var instance = (Command)Activator.CreateInstance(type);
+                    if (CommandDictionary.ContainsKey(instance.ID))
+                        throw new CommandException("A Command type with the same ID: " + instance.ID + " was already added to the dictionary.", instance);
+
+                    CommandDictionary.Add(instance.ID, type);
+                }
+            }
         }
 
-        private static Dictionary<int, Type> m_CommandDictionary = new Dictionary<int, Type>();
+        private static readonly Type s_commandType;
 
         /// <summary>
-        /// Creates a new <see cref="ICommand"/> instance with the specified command ID.
+        /// Gets the dictionary that associates <see cref="Command"/> types with
+        /// there ID.
         /// </summary>
-        /// <param name="id">ID of command.</param>
-        /// <returns>Instance of <see cref="ICommand"/> created.</returns>
-        public static ICommand Create(int id)
+        public static Dictionary<int, Type> CommandDictionary { get; private set; }
+
+        /// <summary>
+        /// Creates a new instance of a <see cref="Command"/> with the specified
+        /// command ID.
+        /// </summary>
+        /// <param name="id">The command ID.</param>
+        /// <returns>The instance of the <see cref="Command"/>.</returns>
+        public static Command Create(int id)
         {
-            var commandType = (Type)null;
-            if (!m_CommandDictionary.TryGetValue(id, out commandType))
-                throw new Exception("Unknown command type!"); // can't make UnknownCommand cause we dont know the length
-            return (ICommand)Activator.CreateInstance(commandType);
+            var type = (Type)null;
+            if (!CommandDictionary.TryGetValue(id, out type))
+                throw new NotSupportedException("Command with ID: " + id + " does not exists or is not implemented.");
+            return (Command)Activator.CreateInstance(type);
         }
 
         /// <summary>
-        /// Tries to creates a new <see cref="ICommand"/> instance with the specified command ID.
+        /// Tries to create a new instance of a <see cref="Command"/> with the specified
+        /// command ID. Returns <c>true</c> if the instance was created successfully.
         /// </summary>
-        /// <param name="id">The ID of the command to create the instance.</param>
-        /// <param name="command">The instance <see cref="ICommand"/> created, returns null if failed to create the instance.</param>
-        /// <returns><see cref="true"/> if the instance was created successfully.</returns>
-        public static bool TryCreate(int id, out ICommand command)
+        /// <param name="id">The command ID.</param>
+        /// <param name="command">The instance of the <see cref="Command"/>.</param>
+        /// <returns>Returns <c>true</c> if the instance was created successfully.</returns>
+        public static bool TryCreate(int id, out Command command)
         {
-            var commandType = (Type)null;
-            if (!m_CommandDictionary.TryGetValue(id, out commandType))
+            var type = (Type)null;
+            if (!CommandDictionary.TryGetValue(id, out type))
             {
                 command = null;
                 return false;
             }
-            command = (ICommand)Activator.CreateInstance(commandType);
+            command = (Command)Activator.CreateInstance(type);
             return true;
         }
     }

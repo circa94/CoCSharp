@@ -1,19 +1,24 @@
-﻿using Newtonsoft.Json;
-
-namespace CoCSharp.Logic
+﻿namespace CoCSharp.Logic
 {
     /// <summary>
-    /// 
+    /// Represents a Clash of Clans decoration (deco).
     /// </summary>
     public class Decoration : VillageObject
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Decoration"/> class with
-        /// the specified ID.
+        /// Initializes a new instance of the <see cref="Decoration"/> class.
         /// </summary>
-        /// <param name="id">Sets the ID of this <see cref="Decoration"/> class.</param>
-        public Decoration(int id, Village village)
-            : base(id, village)
+        public Decoration() : base()
+        {
+            // Space
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Decoration"/> class
+        /// with the specified data ID.
+        /// </summary>
+        /// <param name="dataID">Data ID of the <see cref="Decoration"/>.</param>
+        public Decoration(int dataID) : base(dataID)
         {
             // Space
         }

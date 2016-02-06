@@ -1,60 +1,36 @@
-﻿using CoCSharp.Logic;
-using CoCSharp.Networking;
-using CoCSharp.Networking.Packets;
-using System;
-using System.Collections.Generic;
+﻿using CoCSharp.Networking;
 using System.Net.Sockets;
+using CoCSharp.Server.Handlers;
+using CoCSharp.Logic;
+using System;
 
 namespace CoCSharp.Server
 {
     public class CoCRemoteClient
     {
-        public delegate void PacketHandler(CoCRemoteClient client, CoCServer server, IPacket packet);
-
-        public CoCRemoteClient(CoCServer server, Socket connection)
+        public CoCRemoteClient(CoCServer server, Socket connection, NetworkManagerAsyncSettings settings)
         {
+            _server = server;
             Connection = connection;
-            Server = server;
-            NetworkManager = new NetworkManagerAsync(connection);
-            NetworkManager.PacketReceived += OnPacketReceived;
-            PacketHandlers = new Dictionary<ushort, PacketHandler>();
             Avatar = new Avatar();
-            Home = new Village();
+            NetworkManager = new NetworkManagerAsync(connection, settings);
+            NetworkManager.MessageReceived += OnMessageReceived;
         }
 
-        public Village Home { get; set; }
         public Avatar Avatar { get; set; }
-        public TimeSpan PlayTime { get; set; }
-        public DateTime DateJoined { get; set; }
-        public DateTime DateLastPlayed { get; set; }
-        public NetworkManagerAsync NetworkManager { get; set; }
-        public Socket Connection { get; set; }
+        public Socket Connection { get; private set; }
+        public NetworkManagerAsync NetworkManager { get; private set; }
 
-        private CoCServer Server { get; set; }
-        private Dictionary<ushort, PacketHandler> PacketHandlers { get; set; }
+        private readonly CoCServer _server;
 
-        public void QueuePacket(IPacket packet)
+        private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            if (packet == null)
-                throw new ArgumentNullException("packet");
-            NetworkManager.SendPacket(packet);
-        }
+            if (e.Exception != null)
+                Console.WriteLine("Exception occured: {0}", e.Exception.ToString());
 
-        private void OnPacketReceived(object sender, PacketReceivedEventArgs e)
-        {
-            if (e.Exception == null)
-            {
-                var handler = (PacketHandler)null;
-                if (!PacketHandlers.TryGetValue(e.Packet.ID, out handler))
-                    return;
-                handler(this, Server, e.Packet);
-            }
-            else Console.WriteLine("Failed to read packet: \r\n{0}", e.Exception.Message);
-        }
-
-        public void RegisterPacketHandler(IPacket packet, PacketHandler handler)
-        {
-            PacketHandlers.Add(packet.ID, handler);
+            var handler = (MessageHandler)null;
+            if (_server.MessageHandlers.TryGetValue(e.Message.ID, out handler))
+                handler(_server, this, e.Message);
         }
     }
 }

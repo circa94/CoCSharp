@@ -4,62 +4,61 @@ using System.Net.Sockets;
 
 namespace CoCSharp.Networking
 {
-    internal sealed class SocketAsyncEventArgsPool : IDisposable
+    internal class SocketAsyncEventArgsPool : IDisposable
     {
-        private bool m_Disposed = false;
-        private object m_ObjLock = new object();
-
         public SocketAsyncEventArgsPool(int capacity)
         {
+            if (capacity < 1)
+                throw new ArgumentOutOfRangeException("capacity", "capacity cannot be less that 1.");
+
             Capacity = capacity;
-            Pool = new Stack<SocketAsyncEventArgs>(capacity);
+            _objLock = new object();
+            _pool = new Stack<SocketAsyncEventArgs>(capacity);
         }
+
+        private object _objLock;
+        private bool _disposed;
+        private Stack<SocketAsyncEventArgs> _pool;
 
         public int Capacity { get; private set; }
-        public int Count { get { return Pool.Count; } }
 
-        private Stack<SocketAsyncEventArgs> Pool { get; set; }
-
-        public void Push(SocketAsyncEventArgs args)
-        {
-            if (args == null)
-                throw new ArgumentNullException("args");
-
-            lock (m_ObjLock)
-            {
-                Pool.Push(args);
-            }
-        }
+        public int Count { get { return _pool.Count; } }
 
         public SocketAsyncEventArgs Pop()
         {
-            lock (m_ObjLock)
+            lock(_objLock)
             {
-                return Pool.Pop();
+                return _pool.Pop();
+            }
+        }
+
+        public void Push(SocketAsyncEventArgs args)
+        {
+            lock(_objLock)
+            {
+                _pool.Push(args);
             }
         }
 
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
-        private void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
-            if (m_Disposed)
-                return;
-
-            if (disposing)
+            if (!_disposed)
             {
-                for (int i = 0; i < Count; i++)
+                if (disposing)
                 {
-                    var args = Pool.Pop();
-                    args.Dispose();
+                    for (int i = 0; i < _pool.Count; i++)
+                    {
+                        var args = _pool.Pop();
+                        args.Dispose();
+                    }
                 }
-                Pool.Clear();
+                _disposed = true;
             }
-            m_Disposed = true;
         }
     }
 }
